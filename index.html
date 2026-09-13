@@ -81,14 +81,60 @@
     gap:4px;
     margin-bottom:14px;
   }
-  .round-indicator{
-    font-size:18px;
-    font-weight:700;
-    background:rgba(0,0,0,0.35);
-    border:2px solid var(--gold2);
-    border-radius:30px;
-    padding:8px 20px;
-    color:var(--gold1);
+  .round-selector{
+    display:flex;
+    gap:10px;
+  }
+  .round-tab{
+    position:relative;
+    width:46px;
+    height:46px;
+    border-radius:12px;
+    border:2px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.06);
+    color:#fff;
+    font-weight:800;
+    font-size:17px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:all .15s;
+  }
+  .round-tab:hover{transform:translateY(-2px);}
+  .round-tab.in-progress{
+    border-color:#ffd93d;
+  }
+  .round-tab.in-progress::after{
+    content:'';
+    position:absolute;
+    top:-4px; right:-4px;
+    width:11px;height:11px;
+    border-radius:50%;
+    background:#ffd93d;
+    box-shadow:0 0 6px #ffd93d;
+  }
+  .round-tab.completed{
+    background:rgba(60,255,138,0.15);
+    border-color:var(--green);
+    color:var(--green);
+  }
+  .round-tab.completed::after{
+    content:'✓';
+    position:absolute;
+    top:-7px; right:-7px;
+    width:17px;height:17px;
+    border-radius:50%;
+    background:var(--green);
+    color:#04220f;
+    font-size:11px;
+    font-weight:900;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .round-tab.active{
+    border-color:var(--gold2);
+    box-shadow:0 0 10px rgba(245,183,49,0.7);
+    background:rgba(245,183,49,0.18);
   }
   .pot-indicator{
     font-size:14px;
@@ -504,7 +550,7 @@
 
   <div id="studentView" style="width:100%;display:flex;flex-direction:column;align-items:center;">
     <div class="round-info">
-      <div class="round-indicator" id="roundIndicator">Ronde 1 dari 5</div>
+      <div class="round-selector" id="roundSelector"></div>
       <div class="pot-indicator" id="potIndicator">Round Pot: 0</div>
     </div>
 
@@ -539,7 +585,6 @@
           </div>
           <div class="bottom-actions">
             <button class="btn btn-gray btn-sm" id="switchTurnBtn">Switch Turn</button>
-            <button class="btn btn-blue" id="nextRoundBtn">Next Round ▶</button>
           </div>
         </div>
       </div>
@@ -628,23 +673,30 @@ const ROUNDS = [
   }
 ];
 
+function createRoundState(){
+  return {
+    revealed: [false,false,false,false,false],
+    roundPot: 0,
+    strikes: {A:0, B:0},
+    turn: 'A',
+    stealMode: false,
+    scoringLocked: false
+  };
+}
+
 let state = {
   gameStarted: false,
-  round: 0,
-  revealed: [false,false,false,false,false],
-  roundPot: 0,
+  currentRound: 0,
   scoreA: 0,
   scoreB: 0,
-  strikes: {A:0, B:0},
-  turn: 'A',
-  stealMode: false,
-  scoringLocked: false,
-  roundOver: false,
-  teacherMode: false
+  teacherMode: false,
+  rounds: ROUNDS.map(()=>createRoundState())
 };
 
 const $ = id => document.getElementById(id);
 const other = t => t==='A' ? 'B' : 'A';
+const currentRoundState = () => state.rounds[state.currentRound];
+const isRoundOver = rs => rs.revealed.every(r=>r);
 
 /* ================= TEXT MATCHING ================= */
 function normalize(s){
@@ -787,18 +839,20 @@ function toggleMute(){
 function renderTiles(){
   const tilesEl = $('tiles');
   tilesEl.innerHTML = '';
-  const round = ROUNDS[state.round];
+  const rs = currentRoundState();
+  const round = ROUNDS[state.currentRound];
   round.answers.forEach((ans, idx)=>{
     const tile = document.createElement('div');
-    tile.className = 'tile' + (state.revealed[idx] ? '' : ' hidden-tile');
-    if(state.revealed[idx]){
+    tile.className = 'tile' + (rs.revealed[idx] ? '' : ' hidden-tile');
+    if(rs.revealed[idx]){
       tile.innerHTML = `<span class="ans-text">${idx+1}. ${ans.text}</span><span class="ans-pts">${ans.points}</span>`;
     } else {
       tile.innerHTML = `<span>?</span>`;
     }
     tile.addEventListener('click', ()=>{
-      if(!state.gameStarted || state.roundOver) return;
-      if(!state.revealed[idx]){
+      const rsNow = currentRoundState();
+      if(!state.gameStarted || isRoundOver(rsNow)) return;
+      if(!rsNow.revealed[idx]){
         processCorrect(idx);
       }
     });
@@ -814,8 +868,9 @@ function renderScores(){
 }
 
 function renderChances(){
+  const rs = currentRoundState();
   ['A','B'].forEach(team=>{
-    const remaining = 3 - state.strikes[team];
+    const remaining = 3 - rs.strikes[team];
     const el = $('chances'+team);
     el.textContent = `Kesempatan: ${remaining}/3`;
     el.className = 'chances-badge' + (remaining===0 ? ' zero' : remaining===1 ? ' low' : '');
@@ -823,42 +878,55 @@ function renderChances(){
 }
 
 function renderTurn(){
-  $('turnA').classList.toggle('on', state.turn==='A');
-  $('turnB').classList.toggle('on', state.turn==='B');
-  $('turnBadgeA').innerHTML = state.turn==='A' ? '<span class="active-turn">GILIRAN</span>' : '';
-  $('turnBadgeB').innerHTML = state.turn==='B' ? '<span class="active-turn">GILIRAN</span>' : '';
+  const rs = currentRoundState();
+  $('turnA').classList.toggle('on', rs.turn==='A');
+  $('turnB').classList.toggle('on', rs.turn==='B');
+  $('turnBadgeA').innerHTML = rs.turn==='A' ? '<span class="active-turn">GILIRAN</span>' : '';
+  $('turnBadgeB').innerHTML = rs.turn==='B' ? '<span class="active-turn">GILIRAN</span>' : '';
 }
 
-function renderRoundIndicator(){
-  $('roundIndicator').textContent = `Ronde ${state.round+1} dari ${ROUNDS.length}`;
-  $('potIndicator').textContent = `Round Pot: ${state.roundPot}`;
+function renderRoundSelector(){
+  const container = $('roundSelector');
+  container.innerHTML = '';
+  ROUNDS.forEach((_, idx)=>{
+    const rs = state.rounds[idx];
+    const revealedCount = rs.revealed.filter(Boolean).length;
+    const btn = document.createElement('button');
+    btn.className = 'round-tab';
+    if(revealedCount === 5) btn.classList.add('completed');
+    else if(revealedCount > 0) btn.classList.add('in-progress');
+    if(idx === state.currentRound) btn.classList.add('active');
+    btn.textContent = idx + 1;
+    btn.title = `Round ${idx + 1}`;
+    btn.addEventListener('click', ()=> switchRound(idx));
+    container.appendChild(btn);
+  });
+}
+
+function renderRoundMeta(){
+  renderRoundSelector();
+  $('potIndicator').textContent = `Round Pot: ${currentRoundState().roundPot}`;
 }
 
 function renderSubmitState(){
-  const disabled = !state.gameStarted || state.roundOver;
+  const disabled = !state.gameStarted || isRoundOver(currentRoundState());
   $('guessInput').disabled = disabled;
   $('submitBtn').disabled = disabled;
 }
 
 function renderLockedBanner(){
-  const el = $('lockedBanner');
-  el.classList.toggle('show', state.scoringLocked && !state.roundOver);
-}
-
-function renderNextRoundBtn(){
-  const btn = $('nextRoundBtn');
-  const isLast = state.round >= ROUNDS.length - 1;
-  btn.disabled = !state.roundOver || isLast;
-  btn.textContent = (isLast && state.roundOver) ? 'Game Selesai' : 'Next Round ▶';
+  const rs = currentRoundState();
+  $('lockedBanner').classList.toggle('show', rs.scoringLocked && !isRoundOver(rs));
 }
 
 function renderStealUI(){
+  const rs = currentRoundState();
   const banner = $('stealBanner');
   const flash = $('stealFlash');
-  if(state.stealMode){
-    const teamClass = state.turn==='A' ? 'teamA' : 'teamB';
+  if(rs.stealMode){
+    const teamClass = rs.turn==='A' ? 'teamA' : 'teamB';
     banner.className = 'steal-banner show ' + teamClass;
-    banner.textContent = `🔥 STEAL! TEAM ${state.turn} MENCOBA MENCURI ${state.roundPot} POIN! 🔥`;
+    banner.textContent = `🔥 STEAL! TEAM ${rs.turn} MENCOBA MENCURI ${rs.roundPot} POIN! 🔥`;
     flash.className = 'show ' + teamClass;
   } else {
     banner.className = 'steal-banner';
@@ -871,9 +939,8 @@ function renderAll(){
   renderScores();
   renderChances();
   renderTurn();
-  renderRoundIndicator();
+  renderRoundMeta();
   renderSubmitState();
-  renderNextRoundBtn();
   renderStealUI();
   renderLockedBanner();
 }
@@ -918,95 +985,86 @@ function startEditScore(team){
 }
 
 function revealTile(idx, creditTeam){
-  if(state.revealed[idx]) return;
-  state.revealed[idx] = true;
-  const pts = ROUNDS[state.round].answers[idx].points;
+  const rs = currentRoundState();
+  if(rs.revealed[idx]) return;
+  rs.revealed[idx] = true;
+  const pts = ROUNDS[state.currentRound].answers[idx].points;
   if(creditTeam){
     addScore(creditTeam, pts);
-    state.roundPot += pts;
+    rs.roundPot += pts;
   }
   renderTiles();
-  renderRoundIndicator();
+  renderRoundMeta();
 }
 
 function processCorrect(idx){
-  if(state.stealMode){
+  const rs = currentRoundState();
+  if(rs.stealMode){
     // the one steal guess, correct: entire pot goes to the stealing team
     revealTile(idx, null);
-    addScore(state.turn, state.roundPot);
+    addScore(rs.turn, rs.roundPot);
     playCorrectSound();
     showPopup(true);
-    state.stealMode = false;
-    state.scoringLocked = true;
-  } else if(state.scoringLocked){
+    rs.stealMode = false;
+    rs.scoringLocked = true;
+  } else if(rs.scoringLocked){
     // reveal-only: display the answer, no scoring
     revealTile(idx, null);
     playCorrectSound();
     showPopup(true);
   } else {
     // normal scoring
-    revealTile(idx, state.turn);
+    revealTile(idx, rs.turn);
     playCorrectSound();
     showPopup(true);
   }
-  if(state.revealed.every(r=>r)){
-    finalizeRoundOver();
-  } else {
-    renderStealUI();
-    renderLockedBanner();
-    renderSubmitState();
-    renderNextRoundBtn();
-  }
+  renderStealUI();
+  renderLockedBanner();
+  renderSubmitState();
+  renderRoundMeta();
 }
 
 function processWrong(){
+  const rs = currentRoundState();
   playWrongSound();
   showPopup(false);
-  if(state.stealMode){
+  if(rs.stealMode){
     // the one steal guess, wrong: pot stays with the original team, scoring now locked
-    state.stealMode = false;
-    state.scoringLocked = true;
-  } else if(state.scoringLocked){
+    rs.stealMode = false;
+    rs.scoringLocked = true;
+  } else if(rs.scoringLocked){
     // reveal-only phase: a wrong guess just shows the popup, nothing else changes
   } else {
-    state.strikes[state.turn] += 1;
+    rs.strikes[rs.turn] += 1;
     renderChances();
-    if(state.strikes[state.turn] >= 3){
-      enterStealMode();
+    if(rs.strikes[rs.turn] >= 3){
+      enterStealMode(rs);
       return;
     }
   }
   renderStealUI();
   renderLockedBanner();
   renderSubmitState();
-  renderNextRoundBtn();
 }
 
-function enterStealMode(){
-  state.stealMode = true;
-  state.turn = other(state.turn);
+function enterStealMode(rs){
+  rs.stealMode = true;
+  rs.turn = other(rs.turn);
   renderTurn();
   renderStealUI();
   renderLockedBanner();
 }
 
-function finalizeRoundOver(){
-  state.roundOver = true;
-  state.stealMode = false;
-  renderStealUI();
-  renderLockedBanner();
-  renderSubmitState();
-  renderNextRoundBtn();
-}
-
 function handleSubmit(){
-  if(!state.gameStarted || state.roundOver) return;
+  if(!state.gameStarted) return;
+  const rs = currentRoundState();
+  if(isRoundOver(rs)) return;
   const guess = $('guessInput').value;
   if(!guess.trim()) return;
-  const round = ROUNDS[state.round];
+  const round = ROUNDS[state.currentRound];
   let matchedIdx = -1;
   for(let i=0;i<round.answers.length;i++){
-    if(state.revealed[i]) continue;
+    if(rs.revealed[i]) continue;
     if(isMatch(guess, round.answers[i].text)){
       matchedIdx = i;
       break;
@@ -1021,32 +1079,16 @@ function handleSubmit(){
   $('guessInput').focus();
 }
 
-function nextRound(){
-  if(!state.roundOver) return;
-  if(state.round >= ROUNDS.length - 1) return;
-  state.round += 1;
-  state.revealed = [false,false,false,false,false];
-  state.strikes = {A:0, B:0};
-  state.roundPot = 0;
-  state.roundOver = false;
-  state.stealMode = false;
-  state.scoringLocked = false;
-  state.turn = 'A';
+function switchRound(idx){
+  state.currentRound = idx;
   renderAll();
 }
 
 function resetGame(){
-  state.gameStarted = state.gameStarted; // keep started/music state
-  state.round = 0;
-  state.revealed = [false,false,false,false,false];
-  state.roundPot = 0;
+  state.currentRound = 0;
   state.scoreA = 0;
   state.scoreB = 0;
-  state.strikes = {A:0, B:0};
-  state.turn = 'A';
-  state.stealMode = false;
-  state.scoringLocked = false;
-  state.roundOver = false;
+  state.rounds = ROUNDS.map(()=>createRoundState());
   renderAll();
   $('guessInput').value = '';
 }
@@ -1130,15 +1172,15 @@ $('resetBtn').addEventListener('click', ()=>{
     resetGame();
   }
 });
-$('nextRoundBtn').addEventListener('click', nextRound);
 $('submitBtn').addEventListener('click', handleSubmit);
 $('guessInput').addEventListener('keydown', e=>{
   if(e.key === 'Enter') handleSubmit();
 });
-$('turnA').addEventListener('click', ()=>{ state.turn='A'; renderTurn(); });
-$('turnB').addEventListener('click', ()=>{ state.turn='B'; renderTurn(); });
+$('turnA').addEventListener('click', ()=>{ currentRoundState().turn='A'; renderTurn(); });
+$('turnB').addEventListener('click', ()=>{ currentRoundState().turn='B'; renderTurn(); });
 $('switchTurnBtn').addEventListener('click', ()=>{
-  state.turn = other(state.turn);
+  const rs = currentRoundState();
+  rs.turn = other(rs.turn);
   renderTurn();
 });
 $('scoreA').addEventListener('click', e=>{ if(e.target.tagName !== 'INPUT') startEditScore('A'); });
