@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCIO BATTLE</title>
+<style>
+  :root{
+    --navy1:#050b24;
+    --navy2:#0d1a4a;
+    --navy3:#122266;
+    --gold1:#ffe28a;
+    --gold2:#f5b731;
+    --gold3:#c9861a;
+    --red1:#ff4d4d;
+    --red2:#8a0000;
+    --blue1:#4da3ff;
+    --blue2:#003f8a;
+    --green:#1fd655;
+    --white:#fdfdfd;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:'Segoe UI',Arial,Helvetica,sans-serif;
+    background:radial-gradient(circle at 50% 0%,var(--navy3),var(--navy1) 70%);
+    color:var(--white);
+    overflow-x:hidden;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:16px 20px 40px;
+  }
+  .topbar{
+    width:100%;
+    max-width:1200px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .topbar-group{display:flex;gap:8px;align-items:center;}
+  h1.title{
+    font-size:clamp(20px,3vw,34px);
+    text-align:center;
+    letter-spacing:1px;
+    color:var(--gold2);
+    text-shadow:0 0 12px rgba(245,183,49,0.6), 2px 2px 0 #000;
+    margin:6px 0;
+    width:100%;
+  }
+  .btn{
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    color:#fff;
+    box-shadow:0 4px 0 rgba(0,0,0,0.35);
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,0.35);}
+  .btn:disabled{opacity:0.35;cursor:not-allowed;box-shadow:none;transform:none;}
+  .btn-gold{background:linear-gradient(180deg,var(--gold1),var(--gold3));color:#33230a;}
+  .btn-gray{background:linear-gradient(180deg,#6b7280,#374151);}
+  .btn-red{background:linear-gradient(180deg,#ff6b6b,#a10000);}
+  .btn-green{background:linear-gradient(180deg,#4ade80,#0f8a3c);}
+  .btn-blue{background:linear-gradient(180deg,#60a5fa,#0b4aa8);}
+  .btn-sm{padding:6px 12px;font-size:14px;border-radius:8px;}
+
+  .round-info{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    margin-bottom:14px;
+  }
+  .round-indicator{
+    font-size:18px;
+    font-weight:700;
+    background:rgba(0,0,0,0.35);
+    border:2px solid var(--gold2);
+    border-radius:30px;
+    padding:8px 20px;
+    color:var(--gold1);
+  }
+  .pot-indicator{
+    font-size:14px;
+    color:var(--gold1);
+    opacity:0.85;
+    font-weight:600;
+  }
+
+  .board-wrap{
+    display:flex;
+    gap:22px;
+    width:100%;
+    max-width:1200px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+
+  .team-panel{
+    flex:1 1 220px;
+    max-width:260px;
+    border-radius:18px;
+    padding:16px;
+    text-align:center;
+    box-shadow:0 0 0 3px rgba(255,255,255,0.08) inset, 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .team-panel.teamA{
+    background:linear-gradient(160deg,#3a0000,#1a0000);
+    border:3px solid var(--red1);
+  }
+  .team-panel.teamB{
+    background:linear-gradient(160deg,#001a3a,#00081a);
+    border:3px solid var(--blue1);
+  }
+  .team-name{
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:1px;
+    margin-bottom:6px;
+  }
+  .teamA .team-name{color:var(--red1);}
+  .teamB .team-name{color:var(--blue1);}
+  .team-score{
+    font-size:52px;
+    font-weight:900;
+    margin:6px 0 6px;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.5);
+    cursor:pointer;
+    user-select:none;
+    border-radius:10px;
+    transition:opacity .15s;
+  }
+  .team-score:hover{opacity:0.8;}
+  .score-edit-input{
+    width:100%;
+    max-width:150px;
+    font-size:40px;
+    font-weight:900;
+    text-align:center;
+    border:2px solid var(--gold2);
+    border-radius:10px;
+    background:#fff;
+    color:#111;
+    padding:2px 6px;
+    font-family:inherit;
+  }
+  .active-turn{
+    display:inline-block;
+    margin-bottom:8px;
+    padding:4px 12px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:800;
+    background:var(--gold2);
+    color:#332200;
+    animation:pulse 1.2s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.08);}
+  }
+  .chances-badge{
+    display:inline-block;
+    margin:8px 0;
+    padding:6px 16px;
+    border-radius:20px;
+    font-size:15px;
+    font-weight:800;
+    background:rgba(255,255,255,0.08);
+    border:2px solid rgba(255,255,255,0.3);
+    transition:all .2s;
+  }
+  .chances-badge.low{
+    background:rgba(255,140,0,0.25);
+    border-color:#ff8c00;
+    color:#ffd9a0;
+  }
+  .chances-badge.zero{
+    background:rgba(255,45,45,0.3);
+    border-color:#ff2d2d;
+    color:#ffb3b3;
+    box-shadow:0 0 12px rgba(255,45,45,0.6);
+  }
+  .adjust-row{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    justify-content:center;
+    margin-top:8px;
+  }
+  .adjust-row input[type=number]{
+    width:64px;
+    padding:6px;
+    border-radius:8px;
+    border:none;
+    text-align:center;
+    font-weight:700;
+    font-size:14px;
+  }
+
+  .center-board{
+    flex:2 1 460px;
+    max-width:560px;
+    background:linear-gradient(180deg,var(--navy2),var(--navy1));
+    border:4px solid var(--gold2);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:0 0 30px rgba(245,183,49,0.25), 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .steal-banner{
+    display:none;
+    text-align:center;
+    font-weight:900;
+    font-size:18px;
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:12px;
+    letter-spacing:0.5px;
+  }
+  .steal-banner.show{display:block;animation:stealPulse .6s infinite alternate;}
+  .steal-banner.teamA{background:linear-gradient(90deg,#8a0000,#ff4d4d);color:#fff;box-shadow:0 0 20px rgba(255,77,77,0.8);}
+  .steal-banner.teamB{background:linear-gradient(90deg,#003f8a,#4da3ff);color:#fff;box-shadow:0 0 20px rgba(77,163,255,0.8);}
+  @keyframes stealPulse{0%{transform:scale(1);}100%{transform:scale(1.035);}}
+
+  .locked-banner{
+    display:none;
+    text-align:center;
+    font-weight:800;
+    font-size:14px;
+    padding:9px;
+    border-radius:10px;
+    margin-bottom:12px;
+    background:rgba(255,255,255,0.06);
+    border:2px dashed var(--gold2);
+    color:var(--gold1);
+  }
+  .locked-banner.show{display:block;}
+
+  .tiles{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .tile{
+    position:relative;
+    height:58px;
+    border-radius:10px;
+    background:linear-gradient(180deg,var(--gold1),var(--gold3));
+    border:2px solid #7a5312;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 18px;
+    font-weight:800;
+    font-size:20px;
+    color:#3a2705;
+    box-shadow:inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.25);
+    cursor:pointer;
+    user-select:none;
+    transition:transform .15s;
+    perspective:800px;
+  }
+  .tile:hover{transform:scale(1.01);}
+  .tile.hidden-tile{
+    background:linear-gradient(180deg,#1a2f7a,#0c1748);
+    color:var(--gold1);
+    border-color:#0a123a;
+    justify-content:center;
+    font-size:26px;
+    letter-spacing:2px;
+  }
+  .tile.revealed{
+    animation:flipin .5s ease;
+  }
+  @keyframes flipin{
+    0%{transform:rotateX(90deg);opacity:0.3;}
+    100%{transform:rotateX(0deg);opacity:1;}
+  }
+  .tile .ans-text{text-align:left;flex:1;}
+  .tile .ans-pts{
+    background:#3a2705;
+    color:var(--gold1);
+    border-radius:6px;
+    padding:4px 10px;
+    font-size:18px;
+    min-width:44px;
+    text-align:center;
+  }
+
+  .turn-controls{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:center;
+  }
+  .turn-toggle{
+    display:flex;
+    gap:8px;
+  }
+  .turn-toggle button{
+    flex:1;
+    padding:10px 14px;
+    border-radius:10px;
+    border:2px solid transparent;
+    font-weight:800;
+    cursor:pointer;
+    color:#fff;
+    background:rgba(255,255,255,0.08);
+  }
+  .turn-toggle button.selA.on{background:linear-gradient(180deg,#ff6b6b,#a10000);border-color:#fff;}
+  .turn-toggle button.selB.on{background:linear-gradient(180deg,#60a5fa,#0b4aa8);border-color:#fff;}
+
+  .guess-row{
+    display:flex;
+    gap:8px;
+    width:100%;
+  }
+  .guess-row input[type=text]{
+    flex:1;
+    padding:12px 14px;
+    border-radius:10px;
+    border:none;
+    font-size:17px;
+    font-weight:600;
+  }
+  .guess-row input[type=text]:disabled{opacity:0.5;}
+
+  .bottom-actions{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  /* ---- Popups ---- */
+  #popupOverlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+    background:rgba(0,0,0,0.65);
+  }
+  .popup-box{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+  }
+  .popup-icon{
+    width:180px;height:180px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:110px;
+    font-weight:900;
+    color:#fff;
+    animation:pop .5s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{
+    0%{transform:scale(0);opacity:0;}
+    60%{transform:scale(1.2);opacity:1;}
+    100%{transform:scale(1);}
+  }
+  .popup-icon.correct{
+    background:radial-gradient(circle,#3cff8a,#0aa93f);
+    box-shadow:0 0 60px 20px rgba(60,255,138,0.7);
+  }
+  .popup-icon.wrong{
+    background:radial-gradient(circle,#ff6b6b,#8a0000);
+    box-shadow:0 0 60px 20px rgba(255,80,80,0.7);
+  }
+  .popup-text{
+    font-size:56px;
+    font-weight:900;
+    letter-spacing:2px;
+    text-shadow:3px 3px 0 rgba(0,0,0,0.5);
+  }
+  .popup-text.correct{color:var(--green);}
+  .popup-text.wrong{color:var(--red1);}
+
+  .confetti-piece{
+    position:fixed;
+    top:-20px;
+    width:10px;height:16px;
+    opacity:0.95;
+    z-index:998;
+    animation-name:fall;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+  }
+  @keyframes fall{
+    0%{transform:translateY(0) rotate(0deg);}
+    100%{transform:translateY(105vh) rotate(720deg);}
+  }
+
+  /* ---- Steal screen flash ---- */
+  #stealFlash{
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:500;
+    display:none;
+  }
+  #stealFlash.show{display:block;animation:borderPulse .5s infinite alternate;}
+  #stealFlash.teamA{box-shadow:inset 0 0 0 14px rgba(255,45,45,0.85);}
+  #stealFlash.teamB{box-shadow:inset 0 0 0 14px rgba(77,163,255,0.85);}
+  @keyframes borderPulse{0%{opacity:0.35;}100%{opacity:1;}}
+
+  /* ---- Start overlay ---- */
+  #startOverlay{
+    position:fixed;inset:0;
+    background:rgba(2,6,23,0.97);
+    z-index:2000;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:24px;
+    text-align:center;
+    padding:20px;
+  }
+  #startOverlay h2{
+    color:var(--gold1);
+    font-size:clamp(24px,4vw,38px);
+    text-shadow:0 0 14px rgba(245,183,49,0.6);
+    margin:0;
+  }
+  #startOverlay p{color:#cbd5e1;font-size:15px;max-width:480px;margin:0;}
+  #startBtn{font-size:24px;padding:18px 44px;border-radius:16px;}
+
+  /* ---- Teacher view ---- */
+  #teacherView{
+    width:100%;
+    max-width:1000px;
+    display:none;
+  }
+  .teacher-card{
+    background:rgba(255,255,255,0.06);
+    border:2px solid var(--gold2);
+    border-radius:14px;
+    padding:16px 20px;
+    margin-bottom:16px;
+  }
+  .teacher-card h3{
+    color:var(--gold1);
+    margin:0 0 10px;
+    font-size:19px;
+  }
+  .teacher-card ol{margin:0;padding-left:22px;}
+  .teacher-card li{
+    font-size:16px;
+    margin-bottom:6px;
+    display:flex;
+    justify-content:space-between;
+    max-width:520px;
+  }
+  .teacher-card li .pt{
+    color:var(--gold2);
+    font-weight:800;
+    margin-left:12px;
+  }
+  .hint{
+    text-align:center;
+    font-size:12px;
+    opacity:0.6;
+    margin-top:10px;
+  }
+</style>
+</head>
+<body>
+
+<div id="startOverlay">
+  <h2>🏆 SOCIO BATTLE 🏆</h2>
+  <p>Family Feud style: 2 tim bersaing menjawab 5 ronde pertanyaan Metode Penelitian Sosial. Klik mulai untuk menyalakan musik dan memulai permainan.</p>
+  <button class="btn btn-gold" id="startBtn">▶ MULAI PERMAINAN</button>
+</div>
+
+<div id="stealFlash"></div>
+
+<div id="app">
+
+  <div class="topbar">
+    <div class="topbar-group">
+      <button class="btn btn-gray" id="teacherToggleBtn">Teacher View</button>
+      <button class="btn btn-gray btn-sm" id="muteBtn" title="Mute/unmute musik">🔊</button>
+    </div>
+    <h1 class="title">🏆 SOCIO BATTLE 🏆</h1>
+    <button class="btn btn-red" id="resetBtn">Reset Game</button>
+  </div>
+
+  <div id="studentView" style="width:100%;display:flex;flex-direction:column;align-items:center;">
+    <div class="round-info">
+      <div class="round-indicator" id="roundIndicator">Ronde 1 dari 5</div>
+      <div class="pot-indicator" id="potIndicator">Round Pot: 0</div>
+    </div>
+
+    <div class="board-wrap">
+      <!-- TEAM A -->
+      <div class="team-panel teamA">
+        <div class="team-name">TEAM A</div>
+        <div id="turnBadgeA" style="min-height:26px;"></div>
+        <div class="team-score" id="scoreA" title="Klik untuk edit skor langsung">0</div>
+        <div class="chances-badge" id="chancesA">Kesempatan: 3/3</div>
+        <div class="adjust-row">
+          <button class="btn btn-red btn-sm" id="minusA">−</button>
+          <input type="number" id="amountA" value="10" min="0">
+          <button class="btn btn-red btn-sm" id="plusA">+</button>
+        </div>
+      </div>
+
+      <!-- CENTER BOARD -->
+      <div class="center-board">
+        <div class="steal-banner" id="stealBanner"></div>
+        <div class="locked-banner" id="lockedBanner">🔒 Skor ronde ini terkunci — sisa jawaban hanya ditampilkan, tidak menambah poin</div>
+        <div class="tiles" id="tiles"></div>
+
+        <div class="turn-controls">
+          <div class="turn-toggle">
+            <button class="selA" id="turnA">Giliran Team A</button>
+            <button class="selB" id="turnB">Giliran Team B</button>
+          </div>
+          <div class="guess-row">
+            <input type="text" id="guessInput" placeholder="Ketik jawaban tim yang sedang giliran...">
+            <button class="btn btn-gold" id="submitBtn">Submit</button>
+          </div>
+          <div class="bottom-actions">
+            <button class="btn btn-gray btn-sm" id="switchTurnBtn">Switch Turn</button>
+            <button class="btn btn-blue" id="nextRoundBtn">Next Round ▶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEAM B -->
+      <div class="team-panel teamB">
+        <div class="team-name">TEAM B</div>
+        <div id="turnBadgeB" style="min-height:26px;"></div>
+        <div class="team-score" id="scoreB" title="Klik untuk edit skor langsung">0</div>
+        <div class="chances-badge" id="chancesB">Kesempatan: 3/3</div>
+        <div class="adjust-row">
+          <button class="btn btn-blue btn-sm" id="minusB">−</button>
+          <input type="number" id="amountB" value="10" min="0">
+          <button class="btn btn-blue btn-sm" id="plusB">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint">Klik langsung pada tile juga bisa untuk reveal manual jika diperlukan.</div>
+  </div>
+
+  <div id="teacherView">
+    <h2 style="text-align:center;color:var(--gold1);">📋 Teacher View — Semua Soal & Jawaban</h2>
+    <div id="teacherCards"></div>
+  </div>
+
+</div>
+
+<div id="popupOverlay">
+  <div class="popup-box">
+    <div class="popup-icon" id="popupIcon"></div>
+    <div class="popup-text" id="popupText"></div>
+  </div>
+</div>
+
+<script>
+const ROUNDS = [
+  {
+    question: "Sebutkan teknik pengumpulan data dalam penelitian sosial!",
+    answers: [
+      {text:"Observasi", points:40},
+      {text:"Wawancara", points:25},
+      {text:"Angket/Kuesioner", points:20},
+      {text:"Studi Dokumentasi", points:10},
+      {text:"Eksperimen", points:5}
+    ]
+  },
+  {
+    question: "Sebutkan tahapan-tahapan dalam penelitian sosial!",
+    answers: [
+      {text:"Merumuskan Masalah", points:30},
+      {text:"Menyusun Hipotesis", points:25},
+      {text:"Mengumpulkan Data", points:20},
+      {text:"Menganalisis Data", points:15},
+      {text:"Menarik Kesimpulan", points:10}
+    ]
+  },
+  {
+    question: "Sebutkan jenis-jenis data dalam penelitian sosial!",
+    answers: [
+      {text:"Data Primer", points:35},
+      {text:"Data Sekunder", points:30},
+      {text:"Data Kuantitatif", points:15},
+      {text:"Data Kualitatif", points:15},
+      {text:"Data Lapangan", points:5}
+    ]
+  },
+  {
+    question: "Sebutkan istilah-istilah dasar dalam penelitian sosial!",
+    answers: [
+      {text:"Populasi", points:30},
+      {text:"Sampel", points:25},
+      {text:"Variabel", points:20},
+      {text:"Hipotesis", points:15},
+      {text:"Responden", points:10}
+    ]
+  },
+  {
+    question: "Sebutkan sumber data sekunder yang biasa digunakan dalam penelitian sosial!",
+    answers: [
+      {text:"Buku/Jurnal", points:30},
+      {text:"Internet", points:25},
+      {text:"Dokumen Resmi/Arsip", points:20},
+      {text:"Media Massa/Koran", points:15},
+      {text:"Laporan Penelitian Sebelumnya", points:10}
+    ]
+  }
+];
+
+let state = {
+  gameStarted: false,
+  round: 0,
+  revealed: [false,false,false,false,false],
+  roundPot: 0,
+  scoreA: 0,
+  scoreB: 0,
+  strikes: {A:0, B:0},
+  turn: 'A',
+  stealMode: false,
+  scoringLocked: false,
+  roundOver: false,
+  teacherMode: false
+};
+
+const $ = id => document.getElementById(id);
+const other = t => t==='A' ? 'B' : 'A';
+
+/* ================= TEXT MATCHING ================= */
+function normalize(s){
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9\s\/]/g,'')
+    .trim()
+    .replace(/\s+/g,' ');
+}
+
+function levenshtein(a,b){
+  const m=a.length, n=b.length;
+  if(m===0) return n;
+  if(n===0) return m;
+  const dp = Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=0;i<=m;i++) dp[i][0]=i;
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      const cost = a[i-1]===b[j-1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i-1][j]+1,
+        dp[i][j-1]+1,
+        dp[i-1][j-1]+cost
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function isMatch(guess, answerText){
+  const ng = normalize(guess);
+  if(!ng) return false;
+  const variants = answerText.split('/').map(v=>normalize(v));
+  for(const variant of variants){
+    if(!variant) continue;
+    if(ng === variant) return true;
+    if(variant.length>=4 && (variant.includes(ng) || ng.includes(variant))) return true;
+    const threshold = Math.max(1, Math.floor(variant.length*0.25));
+    if(levenshtein(ng, variant) <= threshold) return true;
+  }
+  return false;
+}
+
+/* ================= AUDIO (Web Audio API, synthesized) ================= */
+let audioCtx = null;
+let masterGain, musicGain, sfxGain;
+let musicTimer = null;
+let musicStep = 0;
+let isMuted = false;
+
+const BASS_PATTERN = [110,null,null,null,98,null,null,null,116.54,null,null,null,98,null,110,null];
+const STEP_MS = 130;
+
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 1;
+  masterGain.connect(audioCtx.destination);
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.22;
+  musicGain.connect(masterGain);
+  sfxGain = audioCtx.createGain();
+  sfxGain.gain.value = 0.35;
+  sfxGain.connect(masterGain);
+}
+
+function playTone(freq, startTime, duration, type, destGain, peak){
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  g.gain.setValueAtTime(0.0001, startTime);
+  g.gain.linearRampToValueAtTime(peak, startTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, startTime+duration);
+  osc.connect(g);
+  g.connect(destGain);
+  osc.start(startTime);
+  osc.stop(startTime+duration+0.03);
+}
+
+function playCorrectSound(){
+  if(!audioCtx) return;
+  const t = audioCtx.currentTime;
+  playTone(523.25, t, 0.15, 'triangle', sfxGain, 0.3);
+  playTone(659.25, t+0.12, 0.15, 'triangle', sfxGain, 0.3);
+  playTone(783.99, t+0.24, 0.28, 'triangle', sfxGain, 0.35);
+}
+
+function playWrongSound(){
+  if(!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(170, t);
+  osc.frequency.exponentialRampToValueAtTime(75, t+0.35);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.35, t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.4);
+  osc.connect(g);
+  g.connect(sfxGain);
+  osc.start(t);
+  osc.stop(t+0.42);
+}
+
+function musicStepFn(){
+  if(!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const i = musicStep % 16;
+  const bassFreq = BASS_PATTERN[i];
+  if(bassFreq){
+    playTone(bassFreq, t, 0.22, 'sawtooth', musicGain, 0.22);
+  }
+  if(i % 2 === 0){
+    playTone(1700 + Math.random()*250, t, 0.035, 'square', musicGain, 0.07);
+  }
+  if(i % 8 === 4){
+    playTone(300, t, 0.09, 'square', musicGain, 0.16);
+  }
+  musicStep++;
+}
+
+function startMusic(){
+  if(musicTimer) return;
+  musicStep = 0;
+  musicTimer = setInterval(musicStepFn, STEP_MS);
+}
+
+function toggleMute(){
+  isMuted = !isMuted;
+  if(musicGain && audioCtx){
+    musicGain.gain.setTargetAtTime(isMuted ? 0 : 0.22, audioCtx.currentTime, 0.05);
+  }
+  $('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+}
+
+/* ================= RENDERING ================= */
+function renderTiles(){
+  const tilesEl = $('tiles');
+  tilesEl.innerHTML = '';
+  const round = ROUNDS[state.round];
+  round.answers.forEach((ans, idx)=>{
+    const tile = document.createElement('div');
+    tile.className = 'tile' + (state.revealed[idx] ? '' : ' hidden-tile');
+    if(state.revealed[idx]){
+      tile.innerHTML = `<span class="ans-text">${idx+1}. ${ans.text}</span><span class="ans-pts">${ans.points}</span>`;
+    } else {
+      tile.innerHTML = `<span>?</span>`;
+    }
+    tile.addEventListener('click', ()=>{
+      if(!state.gameStarted || state.roundOver) return;
+      if(!state.revealed[idx]){
+        processCorrect(idx);
+      }
+    });
+    tilesEl.appendChild(tile);
+  });
+}
+
+function renderScores(){
+  const elA = $('scoreA');
+  const elB = $('scoreB');
+  if(!elA.querySelector('input')) elA.textContent = state.scoreA;
+  if(!elB.querySelector('input')) elB.textContent = state.scoreB;
+}
+
+function renderChances(){
+  ['A','B'].forEach(team=>{
+    const remaining = 3 - state.strikes[team];
+    const el = $('chances'+team);
+    el.textContent = `Kesempatan: ${remaining}/3`;
+    el.className = 'chances-badge' + (remaining===0 ? ' zero' : remaining===1 ? ' low' : '');
+  });
+}
+
+function renderTurn(){
+  $('turnA').classList.toggle('on', state.turn==='A');
+  $('turnB').classList.toggle('on', state.turn==='B');
+  $('turnBadgeA').innerHTML = state.turn==='A' ? '<span class="active-turn">GILIRAN</span>' : '';
+  $('turnBadgeB').innerHTML = state.turn==='B' ? '<span class="active-turn">GILIRAN</span>' : '';
+}
+
+function renderRoundIndicator(){
+  $('roundIndicator').textContent = `Ronde ${state.round+1} dari ${ROUNDS.length}`;
+  $('potIndicator').textContent = `Round Pot: ${state.roundPot}`;
+}
+
+function renderSubmitState(){
+  const disabled = !state.gameStarted || state.roundOver;
+  $('guessInput').disabled = disabled;
+  $('submitBtn').disabled = disabled;
+}
+
+function renderLockedBanner(){
+  const el = $('lockedBanner');
+  el.classList.toggle('show', state.scoringLocked && !state.roundOver);
+}
+
+function renderNextRoundBtn(){
+  const btn = $('nextRoundBtn');
+  const isLast = state.round >= ROUNDS.length - 1;
+  btn.disabled = !state.roundOver || isLast;
+  btn.textContent = (isLast && state.roundOver) ? 'Game Selesai' : 'Next Round ▶';
+}
+
+function renderStealUI(){
+  const banner = $('stealBanner');
+  const flash = $('stealFlash');
+  if(state.stealMode){
+    const teamClass = state.turn==='A' ? 'teamA' : 'teamB';
+    banner.className = 'steal-banner show ' + teamClass;
+    banner.textContent = `🔥 STEAL! TEAM ${state.turn} MENCOBA MENCURI ${state.roundPot} POIN! 🔥`;
+    flash.className = 'show ' + teamClass;
+  } else {
+    banner.className = 'steal-banner';
+    flash.className = '';
+  }
+}
+
+function renderAll(){
+  renderTiles();
+  renderScores();
+  renderChances();
+  renderTurn();
+  renderRoundIndicator();
+  renderSubmitState();
+  renderNextRoundBtn();
+  renderStealUI();
+  renderLockedBanner();
+}
+
+/* ================= GAME LOGIC ================= */
+function addScore(team, delta){
+  if(team==='A') state.scoreA = Math.max(0, state.scoreA + delta);
+  else state.scoreB = Math.max(0, state.scoreB + delta);
+  renderScores();
+}
+
+function startEditScore(team){
+  const el = $('score'+team);
+  if(el.querySelector('input')) return;
+  const current = team==='A' ? state.scoreA : state.scoreB;
+  el.textContent = '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.inputMode = 'numeric';
+  input.className = 'score-edit-input';
+  input.value = current;
+  el.appendChild(input);
+  input.focus();
+  input.select();
+
+  input.addEventListener('input', ()=>{
+    input.value = input.value.replace(/[^0-9]/g, '');
+  });
+
+  function commit(){
+    const raw = input.value.trim();
+    const val = raw === '' ? current : parseInt(raw, 10);
+    if(team==='A') state.scoreA = val; else state.scoreB = val;
+    el.textContent = val;
+  }
+
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter') input.blur();
+    if(e.key === 'Escape'){ input.value = String(current); input.blur(); }
+  });
+  input.addEventListener('blur', commit, {once:true});
+}
+
+function revealTile(idx, creditTeam){
+  if(state.revealed[idx]) return;
+  state.revealed[idx] = true;
+  const pts = ROUNDS[state.round].answers[idx].points;
+  if(creditTeam){
+    addScore(creditTeam, pts);
+    state.roundPot += pts;
+  }
+  renderTiles();
+  renderRoundIndicator();
+}
+
+function processCorrect(idx){
+  if(state.stealMode){
+    // the one steal guess, correct: entire pot goes to the stealing team
+    revealTile(idx, null);
+    addScore(state.turn, state.roundPot);
+    playCorrectSound();
+    showPopup(true);
+    state.stealMode = false;
+    state.scoringLocked = true;
+  } else if(state.scoringLocked){
+    // reveal-only: display the answer, no scoring
+    revealTile(idx, null);
+    playCorrectSound();
+    showPopup(true);
+  } else {
+    // normal scoring
+    revealTile(idx, state.turn);
+    playCorrectSound();
+    showPopup(true);
+  }
+  if(state.revealed.every(r=>r)){
+    finalizeRoundOver();
+  } else {
+    renderStealUI();
+    renderLockedBanner();
+    renderSubmitState();
+    renderNextRoundBtn();
+  }
+}
+
+function processWrong(){
+  playWrongSound();
+  showPopup(false);
+  if(state.stealMode){
+    // the one steal guess, wrong: pot stays with the original team, scoring now locked
+    state.stealMode = false;
+    state.scoringLocked = true;
+  } else if(state.scoringLocked){
+    // reveal-only phase: a wrong guess just shows the popup, nothing else changes
+  } else {
+    state.strikes[state.turn] += 1;
+    renderChances();
+    if(state.strikes[state.turn] >= 3){
+      enterStealMode();
+      return;
+    }
+  }
+  renderStealUI();
+  renderLockedBanner();
+  renderSubmitState();
+  renderNextRoundBtn();
+}
+
+function enterStealMode(){
+  state.stealMode = true;
+  state.turn = other(state.turn);
+  renderTurn();
+  renderStealUI();
+  renderLockedBanner();
+}
+
+function finalizeRoundOver(){
+  state.roundOver = true;
+  state.stealMode = false;
+  renderStealUI();
+  renderLockedBanner();
+  renderSubmitState();
+  renderNextRoundBtn();
+}
+
+function handleSubmit(){
+  if(!state.gameStarted || state.roundOver) return;
+  const guess = $('guessInput').value;
+  if(!guess.trim()) return;
+  const round = ROUNDS[state.round];
+  let matchedIdx = -1;
+  for(let i=0;i<round.answers.length;i++){
+    if(state.revealed[i]) continue;
+    if(isMatch(guess, round.answers[i].text)){
+      matchedIdx = i;
+      break;
+    }
+  }
+  if(matchedIdx >= 0){
+    processCorrect(matchedIdx);
+  } else {
+    processWrong();
+  }
+  $('guessInput').value = '';
+  $('guessInput').focus();
+}
+
+function nextRound(){
+  if(!state.roundOver) return;
+  if(state.round >= ROUNDS.length - 1) return;
+  state.round += 1;
+  state.revealed = [false,false,false,false,false];
+  state.strikes = {A:0, B:0};
+  state.roundPot = 0;
+  state.roundOver = false;
+  state.stealMode = false;
+  state.scoringLocked = false;
+  state.turn = 'A';
+  renderAll();
+}
+
+function resetGame(){
+  state.gameStarted = state.gameStarted; // keep started/music state
+  state.round = 0;
+  state.revealed = [false,false,false,false,false];
+  state.roundPot = 0;
+  state.scoreA = 0;
+  state.scoreB = 0;
+  state.strikes = {A:0, B:0};
+  state.turn = 'A';
+  state.stealMode = false;
+  state.scoringLocked = false;
+  state.roundOver = false;
+  renderAll();
+  $('guessInput').value = '';
+}
+
+/* ================= POPUPS / CONFETTI ================= */
+function spawnConfetti(){
+  const colors = ['#ffd93d','#6bff6b','#6bc9ff','#ff6b6b','#c66bff','#ffffff'];
+  for(let i=0;i<60;i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random()*100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    const duration = 1.2 + Math.random()*1.2;
+    piece.style.animationDuration = duration + 's';
+    piece.style.animationDelay = (Math.random()*0.3) + 's';
+    document.body.appendChild(piece);
+    setTimeout(()=>piece.remove(), (duration+0.3)*1000);
+  }
+}
+
+function showPopup(correct){
+  const overlay = $('popupOverlay');
+  const icon = $('popupIcon');
+  const text = $('popupText');
+  overlay.style.display = 'flex';
+  if(correct){
+    icon.className = 'popup-icon correct';
+    icon.textContent = '✓';
+    text.className = 'popup-text correct';
+    text.textContent = 'BENAR!';
+    spawnConfetti();
+  } else {
+    icon.className = 'popup-icon wrong';
+    icon.textContent = '✕';
+    text.className = 'popup-text wrong';
+    text.textContent = 'SALAH!';
+  }
+  const closeDelay = correct ? 1500 : 1300;
+  const timer = setTimeout(()=>{ overlay.style.display='none'; }, closeDelay);
+  overlay.onclick = ()=>{
+    clearTimeout(timer);
+    overlay.style.display='none';
+  };
+}
+
+/* ================= TEACHER VIEW ================= */
+function renderTeacherView(){
+  const container = $('teacherCards');
+  container.innerHTML = '';
+  ROUNDS.forEach((round, i)=>{
+    const card = document.createElement('div');
+    card.className = 'teacher-card';
+    const items = round.answers.map(a=>`<li>${a.text}<span class="pt">${a.points}</span></li>`).join('');
+    card.innerHTML = `<h3>Ronde ${i+1}: ${round.question}</h3><ol>${items}</ol>`;
+    container.appendChild(card);
+  });
+}
+
+function toggleTeacherMode(){
+  state.teacherMode = !state.teacherMode;
+  $('studentView').style.display = state.teacherMode ? 'none' : 'flex';
+  $('teacherView').style.display = state.teacherMode ? 'block' : 'none';
+  $('teacherToggleBtn').textContent = state.teacherMode ? 'Back to Student View' : 'Teacher View';
+  if(state.teacherMode) renderTeacherView();
+}
+
+/* ================= EVENT WIRING ================= */
+$('startBtn').addEventListener('click', ()=>{
+  state.gameStarted = true;
+  initAudio();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  startMusic();
+  $('startOverlay').style.display = 'none';
+  renderAll();
+});
+
+$('muteBtn').addEventListener('click', toggleMute);
+$('teacherToggleBtn').addEventListener('click', toggleTeacherMode);
+$('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Reset seluruh permainan? Skor, strikes, dan progres ronde akan hilang.')){
+    resetGame();
+  }
+});
+$('nextRoundBtn').addEventListener('click', nextRound);
+$('submitBtn').addEventListener('click', handleSubmit);
+$('guessInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') handleSubmit();
+});
+$('turnA').addEventListener('click', ()=>{ state.turn='A'; renderTurn(); });
+$('turnB').addEventListener('click', ()=>{ state.turn='B'; renderTurn(); });
+$('switchTurnBtn').addEventListener('click', ()=>{
+  state.turn = other(state.turn);
+  renderTurn();
+});
+$('scoreA').addEventListener('click', e=>{ if(e.target.tagName !== 'INPUT') startEditScore('A'); });
+$('scoreB').addEventListener('click', e=>{ if(e.target.tagName !== 'INPUT') startEditScore('B'); });
+$('plusA').addEventListener('click', ()=>addScore('A', parseInt($('amountA').value)||0));
+$('minusA').addEventListener('click', ()=>addScore('A', -(parseInt($('amountA').value)||0)));
+$('plusB').addEventListener('click', ()=>addScore('B', parseInt($('amountB').value)||0));
+$('minusB').addEventListener('click', ()=>addScore('B', -(parseInt($('amountB').value)||0)));
+
+renderAll();
+</script>
+</body>
+</html>
