@@ -383,6 +383,38 @@
   }
   .guess-row input[type=text]:disabled{opacity:0.5;}
 
+  .suspense-indicator{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    padding:10px;
+    margin-top:-2px;
+    border-radius:10px;
+    background:rgba(245,183,49,0.1);
+    border:2px dashed var(--gold2);
+    color:var(--gold1);
+    font-weight:800;
+    font-size:15px;
+    letter-spacing:0.5px;
+    animation:suspensePulse 0.9s ease-in-out infinite;
+  }
+  .suspense-indicator.show{display:flex;}
+  .suspense-indicator .spinner{
+    display:inline-block;
+    animation:spin 0.8s linear infinite;
+    font-size:18px;
+  }
+  @keyframes suspensePulse{
+    0%,100%{opacity:0.65;}
+    50%{opacity:1;}
+  }
+  @keyframes spin{
+    from{transform:rotate(0deg);}
+    to{transform:rotate(360deg);}
+  }
+
   .bottom-actions{
     display:flex;
     gap:10px;
@@ -579,6 +611,9 @@
             <button class="selA" id="turnA">Giliran Team A</button>
             <button class="selB" id="turnB">Giliran Team B</button>
           </div>
+          <div class="suspense-indicator" id="suspenseIndicator">
+            <span class="spinner">🔄</span><span>Mengecek jawaban...</span>
+          </div>
           <div class="guess-row">
             <input type="text" id="guessInput" placeholder="Ketik jawaban tim yang sedang giliran...">
             <button class="btn btn-gold" id="submitBtn">Submit</button>
@@ -622,53 +657,53 @@
 <script>
 const ROUNDS = [
   {
-    question: "Sebutkan teknik pengumpulan data dalam penelitian sosial!",
+    question: "Sebutkan jenis-jenis penelitian kualitatif!",
     answers: [
-      {text:"Observasi", points:40},
-      {text:"Wawancara", points:25},
-      {text:"Angket/Kuesioner", points:20},
-      {text:"Studi Dokumentasi", points:10},
-      {text:"Eksperimen", points:5}
+      {text:"Etnografi", points:20},
+      {text:"Studi Kasus", points:20},
+      {text:"Studi Dokumen", points:20},
+      {text:"Observasi Alami", points:20},
+      {text:"Fenomenologi", points:20}
     ]
   },
   {
-    question: "Sebutkan tahapan-tahapan dalam penelitian sosial!",
+    question: "Sebutkan kelebihan metode penelitian kualitatif!",
     answers: [
-      {text:"Merumuskan Masalah", points:30},
-      {text:"Menyusun Hipotesis", points:25},
-      {text:"Mengumpulkan Data", points:20},
-      {text:"Menganalisis Data", points:15},
-      {text:"Menarik Kesimpulan", points:10}
+      {text:"Mampu menggali makna secara mendalam / pemahaman mendalam", points:30},
+      {text:"Fleksibel ", points:30},
+      {text:"Cocok untuk fenomena yang kompleks/unik ", points:25},
+      {text:"Pemahaman Mendalam", points:15},
+      {text:"Penemuan Hal Baru/menemukan hal baru", points:10}
     ]
   },
   {
-    question: "Sebutkan jenis-jenis data dalam penelitian sosial!",
+    question: "Sebutkan kekurangan metode penelitian kualitatif!",
     answers: [
-      {text:"Data Primer", points:35},
-      {text:"Data Sekunder", points:30},
-      {text:"Data Kuantitatif", points:15},
-      {text:"Data Kualitatif", points:15},
-      {text:"Data Lapangan", points:5}
+      {text:"Subjektif / bias", points:30},
+      {text:"Membutuhkan waktu yang lama", points:20},
+      {text:"Tidak  bisa digeneralisasi ", points:20},
+      {text:"Rumit dalam pengelolaan data", points:20},
+      {text:"Ketergantungan pada peneliti / tidak ada standar baku", points:10}
     ]
   },
   {
-    question: "Sebutkan istilah-istilah dasar dalam penelitian sosial!",
+    question: "Sebutkan tempat yang bisa dijadikan lokasi penelitian kualitatif!",
     answers: [
-      {text:"Populasi", points:30},
-      {text:"Sampel", points:25},
-      {text:"Variabel", points:20},
-      {text:"Hipotesis", points:15},
-      {text:"Responden", points:10}
+      {text:"Sekolah", points:25},
+      {text:"Komunitas/lingkungan masyarakat/ masyarakat", points:25},
+      {text:"Pasar/tempat umum ", points:20},
+      {text:"Media sosial", points:15},
+      {text:"Tempat kerja/kantor", points:15}
     ]
   },
   {
-    question: "Sebutkan sumber data sekunder yang biasa digunakan dalam penelitian sosial!",
+    question: "Apa yang biasanya dikumpulkan atau dicari oleh peneliti saat melakukan penelitian kualitatif?",
     answers: [
-      {text:"Buku/Jurnal", points:30},
-      {text:"Internet", points:25},
-      {text:"Dokumen Resmi/Arsip", points:20},
-      {text:"Media Massa/Koran", points:15},
-      {text:"Laporan Penelitian Sebelumnya", points:10}
+      {text:"Cerita / Pengalaman hidup", points:30},
+      {text:"Pendapat / Opini orang", points:30},
+      {text:"Foto / Video dokumentasi", points:25},
+      {text:"Arti / Makna di balik sesuatu", points:15},
+      {text:"Catatan harian / Dokumen lama", points:10}
     ]
   }
 ];
@@ -690,8 +725,11 @@ let state = {
   scoreA: 0,
   scoreB: 0,
   teacherMode: false,
+  suspense: false,
   rounds: ROUNDS.map(()=>createRoundState())
 };
+
+let suspenseToken = 0;
 
 const $ = id => document.getElementById(id);
 const other = t => t==='A' ? 'B' : 'A';
@@ -804,6 +842,31 @@ function playWrongSound(){
   osc.stop(t+0.42);
 }
 
+function playSuspenseSound(){
+  if(!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const dur = 2.6;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(110, t);
+  osc.frequency.exponentialRampToValueAtTime(660, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.16, t + 0.3);
+  g.gain.setValueAtTime(0.16, t + dur - 0.2);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g);
+  g.connect(sfxGain);
+  osc.start(t);
+  osc.stop(t + dur + 0.05);
+
+  const tickCount = 10;
+  for(let k=0;k<tickCount;k++){
+    const tt = t + (k / tickCount) * dur;
+    playTone(1200, tt, 0.03, 'square', sfxGain, 0.06);
+  }
+}
+
 function musicStepFn(){
   if(!audioCtx) return;
   const t = audioCtx.currentTime;
@@ -909,7 +972,7 @@ function renderRoundMeta(){
 }
 
 function renderSubmitState(){
-  const disabled = !state.gameStarted || isRoundOver(currentRoundState());
+  const disabled = !state.gameStarted || isRoundOver(currentRoundState()) || state.suspense;
   $('guessInput').disabled = disabled;
   $('submitBtn').disabled = disabled;
 }
@@ -1056,7 +1119,7 @@ function enterStealMode(rs){
 }
 
 function handleSubmit(){
-  if(!state.gameStarted) return;
+  if(!state.gameStarted || state.suspense) return;
   const rs = currentRoundState();
   if(isRoundOver(rs)) return;
   const guess = $('guessInput').value;
@@ -1070,21 +1133,42 @@ function handleSubmit(){
       break;
     }
   }
-  if(matchedIdx >= 0){
-    processCorrect(matchedIdx);
-  } else {
-    processWrong();
-  }
   $('guessInput').value = '';
-  $('guessInput').focus();
+  startSuspense(matchedIdx);
+}
+
+function startSuspense(matchedIdx){
+  state.suspense = true;
+  suspenseToken++;
+  const myToken = suspenseToken;
+  renderSubmitState();
+  $('suspenseIndicator').classList.add('show');
+  playSuspenseSound();
+  setTimeout(()=>{
+    if(myToken !== suspenseToken) return; // round was switched or game reset mid-delay
+    state.suspense = false;
+    $('suspenseIndicator').classList.remove('show');
+    if(matchedIdx >= 0){
+      processCorrect(matchedIdx);
+    } else {
+      processWrong();
+    }
+    $('guessInput').focus();
+  }, 3000);
 }
 
 function switchRound(idx){
+  suspenseToken++;
+  state.suspense = false;
+  $('suspenseIndicator').classList.remove('show');
   state.currentRound = idx;
   renderAll();
 }
 
 function resetGame(){
+  suspenseToken++;
+  state.suspense = false;
+  $('suspenseIndicator').classList.remove('show');
   state.currentRound = 0;
   state.scoreA = 0;
   state.scoreB = 0;
